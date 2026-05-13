@@ -442,10 +442,15 @@ async function launchGame() {
     if (result.success) {
       showNotification('Minecraft est lance ! Bon jeu !', 'success');
     } else {
-      showNotification('Erreur de lancement: ' + (result.error || 'Erreur inconnue'), 'error');
+      var errorMsg = result.error || 'Erreur inconnue';
+      console.error('Launch error:', errorMsg);
+      var shortMsg = errorMsg.split('\n')[0];
+      if (shortMsg.length > 100) shortMsg = shortMsg.substring(0, 100) + '...';
+      showNotification('Erreur: ' + shortMsg, 'error', 10000);
     }
   } catch (error) {
-    showNotification('Erreur: ' + error.message, 'error');
+    console.error('Launch exception:', error);
+    showNotification('Erreur: ' + error.message, 'error', 10000);
   }
 
   isLaunching = false;

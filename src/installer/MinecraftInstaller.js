@@ -740,11 +740,13 @@ class MinecraftInstaller {
   }
 
   async ensureJava() {
-    if (this.settings.javaPath && fs.existsSync(this.settings.javaPath)) {
+    if (this.settings.javaPath && this.settings.javaPath !== 'java' && fs.existsSync(this.settings.javaPath)) {
+      log.info('Using configured Java:', this.settings.javaPath);
       return this.settings.javaPath;
     }
 
     const javaPaths = this.getDefaultJavaPaths();
+    log.info('Scanning for Java in', javaPaths.length, 'locations...');
 
     for (const javaPath of javaPaths) {
       if (fs.existsSync(javaPath)) {
@@ -758,47 +760,62 @@ class MinecraftInstaller {
     try {
       const javaCheck = await this.executeCommand('java', ['-version']);
       if (javaCheck) {
+        log.info('Using system Java from PATH. Version info:', javaCheck.trim().split('\n')[0]);
         this.settings.javaPath = 'java';
         this.saveSettings();
-        log.info('Using system Java');
         return 'java';
       }
     } catch (_e) {
       // Java not found in PATH
     }
 
-    log.warn('Java not found - Minecraft may not launch correctly');
-    this.settings.javaPath = 'java';
-    this.saveSettings();
-    return 'java';
+    throw new Error('Java non trouve ! Veuillez installer Java 8 (https://java.com/download) et redemarrer le launcher.');
   }
 
   getDefaultJavaPaths() {
     const platform = process.platform;
+    const paths = [];
 
     if (platform === 'win32') {
-      return [
-        'C:\\Program Files\\Java\\jre1.8.0_351\\bin\\java.exe',
-        'C:\\Program Files\\Java\\jdk1.8.0_351\\bin\\java.exe',
-        'C:\\Program Files (x86)\\Java\\jre1.8.0_351\\bin\\java.exe',
+      const programFiles = ['C:\\Program Files\\Java', 'C:\\Program Files (x86)\\Java'];
+      for (const base of programFiles) {
+        try {
+          if (fs.existsSync(base)) {
+            const dirs = fs.readdirSync(base).sort().reverse();
+            for (const dir of dirs) {
+              const javaExe = path.join(base, dir, 'bin', 'java.exe');
+              if (fs.existsSync(javaExe)) {
+                paths.push(javaExe);
+              }
+            }
+          }
+        } catch (_e) {
+          // ignore scan errors
+        }
+      }
+      paths.push(
         'C:\\Program Files\\Eclipse Adoptium\\jdk-8.0.392.8-hotspot\\bin\\java.exe',
-        'C:\\Program Files\\Zulu\\zulu-8\\bin\\java.exe',
-        path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Eclipse Adoptium', 'jdk-8.0.392.8-hotspot', 'bin', 'java.exe'),
-      ];
+        'C:\\Program Files\\Zulu\\zulu-8\\bin\\java.exe'
+      );
+      if (process.env.LOCALAPPDATA) {
+        paths.push(path.join(process.env.LOCALAPPDATA, 'Programs', 'Eclipse Adoptium', 'jdk-8.0.392.8-hotspot', 'bin', 'java.exe'));
+      }
     } else if (platform === 'darwin') {
-      return [
+      paths.push(
         '/Library/Java/JavaVirtualMachines/temurin-8.jdk/Contents/Home/bin/java',
         '/Library/Java/JavaVirtualMachines/zulu-8.jdk/Contents/Home/bin/java',
-        '/usr/bin/java',
-      ];
+        '/usr/bin/java'
+      );
+    } else {
+      paths.push(
+        '/usr/lib/jvm/java-8-openjdk-amd64/bin/java',
+        '/usr/lib/jvm/java-8-openjdk/bin/java',
+        '/usr/lib/jvm/java-1.8.0/bin/java',
+        '/usr/bin/java'
+      );
     }
 
-    return [
-      '/usr/lib/jvm/java-8-openjdk-amd64/bin/java',
-      '/usr/lib/jvm/java-8-openjdk/bin/java',
-      '/usr/lib/jvm/java-1.8.0/bin/java',
-      '/usr/bin/java',
-    ];
+    return paths;
   }
 
   executeCommand(command, args) {
@@ -852,6 +869,7 @@ class MinecraftInstaller {
     }
 
     const javaPath = await this.ensureJava();
+    log.info('Java path resolved to:', javaPath);
 
     onProgress({
       stage: 'Lancement',
@@ -863,6 +881,13 @@ class MinecraftInstaller {
     fs.ensureDirSync(nativesDir);
     await this.extractNatives(nativesDir);
 
+    const nativeFiles = fs.existsSync(nativesDir) ? fs.readdirSync(nativesDir) : [];
+    log.info('Natives extracted:', nativeFiles.length, 'files:', nativeFiles.join(', '));
+
+    if (nativeFiles.length === 0) {
+      log.warn('WARNING: No native files extracted! Game may crash.');
+    }
+
     onProgress({
       stage: 'Lancement',
       progress: 30,
@@ -870,6 +895,19 @@ class MinecraftInstaller {
     });
 
     const classpath = await this.buildClasspath();
+
+    const hasLaunchwrapper = classpath.some(p => p.includes('launchwrapper'));
+    const hasForgeJar = classpath.some(p => p.includes(this.forgeFullVersion));
+    const hasVanillaJar = classpath.some(p => p.includes(this.mcVersion + '.jar'));
+    log.info('Classpath validation - launchwrapper:', hasLaunchwrapper, 'forge:', hasForgeJar, 'vanilla:', hasVanillaJar);
+
+    if (!hasLaunchwrapper) {
+      throw new Error('Fichier launchwrapper manquant dans le classpath. Veuillez reparer le jeu.');
+    }
+    if (!hasVanillaJar) {
+      throw new Error('Client Minecraft manquant. Veuillez reparer le jeu.');
+    }
+
     const args = this.buildGameArguments(session, classpath, nativesDir);
 
     onProgress({
@@ -881,13 +919,14 @@ class MinecraftInstaller {
     log.info('Launching game with Java:', javaPath);
     log.info('Game args count:', args.length);
     log.info('Game directory:', this.gameDir);
+    log.info('Full Java command:', javaPath, args.join(' '));
+    log.info('Full classpath:', classpath.join(process.platform === 'win32' ? ';' : ':'));
 
     const spawnOptions = {
       cwd: this.gameDir,
-      stdio: 'pipe',
+      stdio: ['pipe', 'pipe', 'pipe'],
     };
 
-    spawnOptions.detached = true;
     if (process.platform === 'win32') {
       spawnOptions.windowsHide = false;
     }
@@ -895,39 +934,57 @@ class MinecraftInstaller {
     return new Promise((resolve, reject) => {
       const gameProcess = spawn(javaPath, args, spawnOptions);
 
-      let lastError = '';
+      let allOutput = '';
+      let settled = false;
 
       gameProcess.stdout.on('data', (data) => {
-        log.info('[MC]', data.toString().trim());
+        const msg = data.toString();
+        allOutput += msg;
+        log.info('[MC]', msg.trim());
       });
 
       gameProcess.stderr.on('data', (data) => {
-        const msg = data.toString().trim();
-        lastError = msg;
-        log.warn('[MC-ERR]', msg);
+        const msg = data.toString();
+        allOutput += msg;
+        log.warn('[MC-ERR]', msg.trim());
       });
 
       gameProcess.on('error', (error) => {
-        log.error('Game process error:', error);
-        reject(error);
+        log.error('Game process spawn error:', error);
+        if (!settled) {
+          settled = true;
+          reject(new Error('Impossible de lancer Java: ' + error.message));
+        }
       });
 
       gameProcess.on('close', (code) => {
         log.info('Game process exited with code:', code);
         if (code !== 0 && code !== null) {
-          log.error('Game crashed with code:', code, 'Last error:', lastError);
+          log.error('Game crashed with code:', code);
+          log.error('Full game output:', allOutput || '(no output captured)');
+          if (!settled) {
+            settled = true;
+            const errorDetail = allOutput.trim().slice(-1000) || 'Aucune sortie capturee';
+            reject(new Error(
+              `Minecraft a crashe (code ${code}).\n` +
+              `Java: ${javaPath}\n` +
+              `Sortie:\n${errorDetail}`
+            ));
+          }
         }
       });
 
       setTimeout(() => {
-        onProgress({
-          stage: 'Lancement',
-          progress: 100,
-          detail: 'Minecraft est lancé !',
-        });
-        gameProcess.unref();
-        resolve();
-      }, 5000);
+        if (!settled) {
+          settled = true;
+          onProgress({
+            stage: 'Lancement',
+            progress: 100,
+            detail: 'Minecraft est lancé !',
+          });
+          resolve();
+        }
+      }, 15000);
     });
   }
 
