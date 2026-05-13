@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PalaCraft Launcher - Connexion</title>
+  <link rel="stylesheet" href="../css/common.css">
+  <link rel="stylesheet" href="../css/login.css">
+</head>
+<body>
+  <!-- Title Bar -->
+  <div class="title-bar">
+    <div class="title-bar-title">
+      <div class="logo-icon">PC</div>
+      PalaCraft Launcher
+    </div>
+    <div class="title-bar-buttons">
+      <button class="title-bar-btn" onclick="launcherAPI.window.minimize()" title="Réduire">&#x2500;</button>
+      <button class="title-bar-btn" onclick="launcherAPI.window.maximize()" title="Agrandir">&#x25A1;</button>
+      <button class="title-bar-btn close" onclick="launcherAPI.window.close()" title="Fermer">&#x2715;</button>
+    </div>
+  </div>
+
+  <!-- Background -->
+  <div class="login-bg"></div>
+
+  <!-- Particles -->
+  <div class="particles-bg" id="particles"></div>
+
+  <!-- Login Container -->
+  <div class="login-container" style="padding-top: 36px;">
+    <!-- Left Side - Branding -->
+    <div class="login-branding">
+      <div class="login-logo">
+        <div class="logo-text">PalaCraft</div>
+        <div class="logo-subtitle">Launcher Premium</div>
+      </div>
+
+      <div class="login-features">
+        <div class="login-feature">
+          <div class="login-feature-icon purple">&#x1F3AE;</div>
+          <div class="login-feature-text">
+            <h4>Minecraft 1.7.10 + Forge</h4>
+            <p>Installation automatique complete</p>
+          </div>
+        </div>
+        <div class="login-feature">
+          <div class="login-feature-icon teal">&#x2694;</div>
+          <div class="login-feature-text">
+            <h4>Serveur PvP Faction</h4>
+            <p>Mods exclusifs et events reguliers</p>
+          </div>
+        </div>
+        <div class="login-feature">
+          <div class="login-feature-icon pink">&#x1F451;</div>
+          <div class="login-feature-text">
+            <h4>Systeme de Grades</h4>
+            <p>VIP, VIP+ et MVP avec avantages</p>
+          </div>
+        </div>
+        <div class="login-feature">
+          <div class="login-feature-icon blue">&#x1F504;</div>
+          <div class="login-feature-text">
+            <h4>Auto-Updater</h4>
+            <p>Mise a jour automatique du launcher</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Side - Login Form -->
+    <div class="login-form-side">
+      <div class="login-form-container">
+        <div class="login-form-header">
+          <h2>Connexion</h2>
+          <p>Connectez-vous pour rejoindre l'aventure</p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="login-tabs">
+          <button class="login-tab active" onclick="switchTab('premium')" id="tab-premium">Premium</button>
+          <button class="login-tab" onclick="switchTab('offline')" id="tab-offline">Crack / Offline</button>
+        </div>
+
+        <!-- Premium Panel -->
+        <div class="login-panel active" id="panel-premium">
+          <div class="microsoft-login-content">
+            <div class="ms-logo">&#x1F310;</div>
+            <p class="ms-info">
+              Connectez-vous avec votre compte Microsoft pour acceder a toutes les fonctionnalites premium du serveur.
+            </p>
+
+            <div class="ms-steps">
+              <div class="ms-step">
+                <div class="ms-step-num">1</div>
+                <span>Cliquez sur le bouton ci-dessous</span>
+              </div>
+              <div class="ms-step">
+                <div class="ms-step-num">2</div>
+                <span>Connectez-vous avec votre compte Microsoft</span>
+              </div>
+              <div class="ms-step">
+                <div class="ms-step-num">3</div>
+                <span>Autorisez l'acces a votre compte Xbox Live</span>
+              </div>
+            </div>
+
+            <button class="btn btn-microsoft btn-lg btn-block" onclick="loginMicrosoft()" id="btn-microsoft">
+              &#x1F512; Se connecter avec Microsoft
+            </button>
+          </div>
+        </div>
+
+        <!-- Offline Panel -->
+        <div class="login-panel" id="panel-offline">
+          <div class="offline-form">
+            <div class="offline-warning">
+              <div class="offline-warning-icon">&#x26A0;</div>
+              <p>Le mode Offline vous permet de jouer sans compte Microsoft. Certaines fonctionnalites peuvent etre limitees.</p>
+            </div>
+
+            <div class="input-group">
+              <label for="offline-username">Pseudo</label>
+              <input type="text" id="offline-username" placeholder="Entrez votre pseudo..." maxlength="16" autocomplete="off">
+            </div>
+
+            <button class="btn btn-primary btn-lg btn-block" onclick="loginOffline()" id="btn-offline">
+              &#x1F3AE; Jouer en Offline
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div class="login-loading" id="login-loading">
+          <div class="spinner"></div>
+          <div class="login-loading-text" id="loading-text">Connexion en cours...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Version -->
+  <div class="login-version" id="app-version">v1.0.0</div>
+
+  <script src="../js/particles.js"></script>
+  <script src="../js/notifications.js"></script>
+  <script src="../js/login.js"></script>
+</body>
+</html>

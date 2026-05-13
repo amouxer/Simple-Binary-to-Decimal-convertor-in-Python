@@ -1,0 +1,75 @@
+{
+  "name": "palacraft-launcher",
+  "version": "1.0.0",
+  "description": "Launcher Minecraft Premium - Style Paladium/NationGlory",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux",
+    "build:mac": "electron-builder --mac",
+    "lint": "eslint . --ext .js,.html",
+    "lint:fix": "eslint . --ext .js,.html --fix"
+  },
+  "build": {
+    "appId": "com.palacraftlauncher.app",
+    "productName": "PalaCraft Launcher",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "src/assets/images/icon.ico"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "src/assets/images/icon.png"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "src/assets/images/icon.icns"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "src/assets/images/icon.ico"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "amouxer",
+        "repo": "palacraftlauncher"
+      }
+    ]
+  },
+  "keywords": [
+    "minecraft",
+    "launcher",
+    "paladium",
+    "nationglory",
+    "forge"
+  ],
+  "author": "PalaCraft Team",
+  "license": "MIT",
+  "dependencies": {
+    "adm-zip": "^0.5.10",
+    "axios": "^1.6.7",
+    "electron-log": "^5.1.1",
+    "electron-updater": "^6.1.8",
+    "fs-extra": "^11.2.0",
+    "msmc": "^5.0.5",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "electron": "^28.2.1",
+    "electron-builder": "^24.13.3",
+    "eslint": "^8.56.0"
+  }
+}

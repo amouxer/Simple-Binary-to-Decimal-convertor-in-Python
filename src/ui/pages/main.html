@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PalaCraft Launcher</title>
+  <link rel="stylesheet" href="../css/common.css">
+  <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+  <!-- Title Bar -->
+  <div class="title-bar">
+    <div class="title-bar-title">
+      <div class="logo-icon">PC</div>
+      PalaCraft Launcher
+    </div>
+    <div class="title-bar-buttons">
+      <button class="title-bar-btn" onclick="launcherAPI.window.minimize()">&#x2500;</button>
+      <button class="title-bar-btn" onclick="launcherAPI.window.maximize()">&#x25A1;</button>
+      <button class="title-bar-btn close" onclick="launcherAPI.window.close()">&#x2715;</button>
+    </div>
+  </div>
+
+  <!-- Background -->
+  <div class="main-bg"></div>
+
+  <!-- App Container -->
+  <div class="app-container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-logo">PC</div>
+
+      <div class="sidebar-nav">
+        <button class="sidebar-item active" data-page="home" data-tooltip="Accueil" onclick="navigateTo('home')">&#x1F3E0;</button>
+        <button class="sidebar-item" data-page="news" data-tooltip="Actualites" onclick="navigateTo('news')">&#x1F4F0;</button>
+        <button class="sidebar-item" data-page="shop" data-tooltip="Boutique" onclick="navigateTo('shop')">&#x1F6D2;</button>
+        <button class="sidebar-item" data-page="grades" data-tooltip="Grades" onclick="navigateTo('grades')">&#x1F451;</button>
+        <button class="sidebar-item" data-page="profile" data-tooltip="Profil" onclick="navigateTo('profile')">&#x1F464;</button>
+        <button class="sidebar-item" data-page="settings" data-tooltip="Parametres" onclick="navigateTo('settings')">&#x2699;</button>
+      </div>
+
+      <div class="sidebar-bottom">
+        <div class="profile-avatar" onclick="navigateTo('profile')">
+          <div class="avatar-placeholder" id="sidebar-avatar">?</div>
+        </div>
+        <button class="sidebar-item" data-tooltip="Deconnexion" onclick="handleLogout()" style="color: var(--danger);">&#x1F6AA;</button>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content" style="padding-bottom: 60px;">
+
+      <!-- HOME PAGE -->
+      <div class="content-page active" id="page-home">
+        <div class="home-hero">
+          <div class="hero-content">
+            <h1 class="hero-title">Bienvenue, <span id="hero-username">Joueur</span> !</h1>
+            <p class="hero-subtitle">Pret a rejoindre l'aventure PalaCraft ? Installez le jeu et plongez dans un monde unique avec des mods exclusifs.</p>
+
+            <div class="hero-stats">
+              <div class="hero-stat">
+                <div class="hero-stat-value" id="stat-players">--</div>
+                <div class="hero-stat-label">Joueurs en ligne</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-value" id="stat-max">--</div>
+                <div class="hero-stat-label">Capacite max</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-value">1.7.10</div>
+                <div class="hero-stat-label">Version</div>
+              </div>
+            </div>
+
+            <div class="hero-actions">
+              <div class="server-status-badge">
+                <span class="status-dot" id="server-status-dot"></span>
+                <span id="server-status-text">Verification...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="page-header">
+          <h1>Dernieres Actualites</h1>
+          <p>Restez informe des dernieres nouvelles du serveur</p>
+        </div>
+        <div class="news-grid" id="home-news-grid"></div>
+      </div>
+
+      <!-- NEWS PAGE -->
+      <div class="content-page" id="page-news">
+        <div class="page-header">
+          <h1>Actualites</h1>
+          <p>Toutes les actualites et mises a jour du serveur PalaCraft</p>
+        </div>
+        <div class="news-grid" id="news-grid"></div>
+      </div>
+
+      <!-- SHOP PAGE -->
+      <div class="content-page" id="page-shop">
+        <div class="page-header">
+          <h1>Boutique</h1>
+          <p>Ameliorez votre experience avec nos offres exclusives</p>
+        </div>
+        <div class="shop-categories" id="shop-categories"></div>
+        <div class="shop-grid" id="shop-grid"></div>
+      </div>
+
+      <!-- GRADES PAGE -->
+      <div class="content-page" id="page-grades">
+        <div class="page-header">
+          <h1>Grades</h1>
+          <p>Decouvrez les differents grades disponibles sur PalaCraft</p>
+        </div>
+        <div class="grades-list" id="grades-list"></div>
+      </div>
+
+      <!-- PROFILE PAGE -->
+      <div class="content-page" id="page-profile">
+        <div class="page-header">
+          <h1>Mon Profil</h1>
+          <p>Consultez vos statistiques et informations de joueur</p>
+        </div>
+
+        <div class="profile-section">
+          <div class="profile-header">
+            <div class="profile-skin" id="profile-skin">&#x1F464;</div>
+            <div class="profile-details">
+              <h2 id="profile-username">Joueur</h2>
+              <div class="flex gap-1 mt-1">
+                <span class="badge badge-primary" id="profile-type">Offline</span>
+                <span class="badge badge-success" id="profile-grade">Joueur</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="profile-stats" id="profile-stats">
+            <div class="profile-stat">
+              <div class="profile-stat-value" id="pstat-level">1</div>
+              <div class="profile-stat-label">Niveau</div>
+            </div>
+            <div class="profile-stat">
+              <div class="profile-stat-value" id="pstat-kills">0</div>
+              <div class="profile-stat-label">Kills</div>
+            </div>
+            <div class="profile-stat">
+              <div class="profile-stat-value" id="pstat-deaths">0</div>
+              <div class="profile-stat-label">Morts</div>
+            </div>
+            <div class="profile-stat">
+              <div class="profile-stat-value" id="pstat-playtime">0h</div>
+              <div class="profile-stat-label">Temps de jeu</div>
+            </div>
+            <div class="profile-stat">
+              <div class="profile-stat-value" id="pstat-money">0</div>
+              <div class="profile-stat-label">Monnaie</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SETTINGS PAGE -->
+      <div class="content-page" id="page-settings">
+        <div class="page-header">
+          <h1>Parametres</h1>
+          <p>Configurez le launcher et le jeu selon vos preferences</p>
+        </div>
+
+        <div class="settings-grid">
+          <!-- Java / Performance -->
+          <div class="settings-card">
+            <div class="settings-card-title">
+              <div class="icon purple">&#x2699;</div>
+              Performance
+            </div>
+
+            <div class="settings-row">
+              <span class="settings-row-label">RAM allouee</span>
+              <div class="range-slider">
+                <input type="range" id="setting-ram" min="1024" max="8192" step="512" value="2048" oninput="updateRamLabel()">
+                <div class="range-value" id="ram-value">2048 MB</div>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <span class="settings-row-label">Chemin Java</span>
+              <div>
+                <input type="text" id="setting-java" placeholder="Auto-detect" style="width: 200px; padding: 8px 12px; background: var(--bg-input); border: 1px solid var(--border-light); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 12px; font-family: 'Poppins', sans-serif;">
+              </div>
+            </div>
+          </div>
+
+          <!-- Display -->
+          <div class="settings-card">
+            <div class="settings-card-title">
+              <div class="icon teal">&#x1F5A5;</div>
+              Affichage
+            </div>
+
+            <div class="settings-row">
+              <span class="settings-row-label">Plein ecran</span>
+              <div class="toggle-switch" id="toggle-fullscreen" onclick="toggleSetting('fullscreen')"></div>
+            </div>
+
+            <div class="settings-row">
+              <span class="settings-row-label">Largeur</span>
+              <input type="number" id="setting-width" value="854" min="640" max="3840" style="width: 80px; padding: 8px; background: var(--bg-input); border: 1px solid var(--border-light); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 13px; text-align: center; font-family: 'Poppins', sans-serif;">
+            </div>
+
+            <div class="settings-row">
+              <span class="settings-row-label">Hauteur</span>
+              <input type="number" id="setting-height" value="480" min="480" max="2160" style="width: 80px; padding: 8px; background: var(--bg-input); border: 1px solid var(--border-light); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 13px; text-align: center; font-family: 'Poppins', sans-serif;">
+            </div>
+          </div>
+
+          <!-- Game -->
+          <div class="settings-card">
+            <div class="settings-card-title">
+              <div class="icon pink">&#x1F3AE;</div>
+              Jeu
+            </div>
+
+            <div class="settings-row">
+              <span class="settings-row-label">Auto-connexion au serveur</span>
+              <div class="toggle-switch active" id="toggle-autoconnect" onclick="toggleSetting('autoConnect')"></div>
+            </div>
+
+            <div class="settings-row">
+              <span class="settings-row-label">Reparer le jeu</span>
+              <button class="btn btn-danger btn-sm" onclick="repairGame()">Reparer</button>
+            </div>
+          </div>
+
+          <!-- About -->
+          <div class="settings-card">
+            <div class="settings-card-title">
+              <div class="icon purple">&#x2139;</div>
+              A propos
+            </div>
+
+            <div class="settings-row">
+              <span class="settings-row-label">Version du launcher</span>
+              <span class="settings-row-value" id="settings-version">1.0.0</span>
+            </div>
+
+            <div class="settings-row">
+              <span class="settings-row-label">Version Minecraft</span>
+              <span class="settings-row-value">1.7.10</span>
+            </div>
+
+            <div class="settings-row">
+              <span class="settings-row-label">Version Forge</span>
+              <span class="settings-row-value">10.13.4.1614</span>
+            </div>
+
+            <div class="settings-row">
+              <span class="settings-row-label">Mise a jour</span>
+              <button class="btn btn-primary btn-sm" onclick="checkForUpdates()">Verifier</button>
+            </div>
+
+            <div class="settings-row">
+              <span class="settings-row-label">Sauvegarder</span>
+              <button class="btn btn-success btn-sm" onclick="saveSettings()">Sauvegarder</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Bar -->
+    <div class="bottom-bar">
+      <button class="btn btn-success btn-lg play-btn" id="play-btn" onclick="handlePlay()">
+        &#x25B6; JOUER
+      </button>
+      <div class="bottom-bar-info">
+        <span id="bottom-username">Joueur</span>
+        <span>|</span>
+        <span id="bottom-version">v1.0.0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Install Overlay -->
+  <div class="install-overlay" id="install-overlay">
+    <div class="install-modal">
+      <div class="install-icon">&#x1F4E6;</div>
+      <h2 class="install-title" id="install-title">Installation en cours</h2>
+      <p class="install-subtitle" id="install-subtitle">Veuillez patienter pendant l'installation du jeu...</p>
+
+      <div class="progress-container">
+        <div class="progress-info">
+          <span class="progress-stage" id="install-stage">Preparation...</span>
+          <span class="progress-percent" id="install-percent">0%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-bar-fill" id="install-bar" style="width: 0%"></div>
+        </div>
+        <div class="progress-detail" id="install-detail">Initialisation...</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/particles.js"></script>
+  <script src="../js/notifications.js"></script>
+  <script src="../js/main.js"></script>
+</body>
+</html>
