@@ -13,8 +13,11 @@ const LIBRARIES_URL = 'https://libraries.minecraft.net';
 const MODS = [
   {
     name: 'ironchest-1.7.10-6.0.62.742-universal.jar',
-    url: 'https://mediafilez.forgecdn.net/files/2278/761/ironchest-1.7.10-6.0.62.742-universal.jar',
-    fallbackUrl: 'https://maven.minecraftforge.net/cpw/mods/ironchest/6.0.62.742/ironchest-6.0.62.742-universal.jar',
+    urls: [
+      'https://mediafilez.forgecdn.net/files/2230/908/ironchest-1.7.10-6.0.62.742-universal.jar',
+      'https://edge.forgecdn.net/files/2230/908/ironchest-1.7.10-6.0.62.742-universal.jar',
+    ],
+    size: 158104,
   },
 ];
 
@@ -171,6 +174,13 @@ class MinecraftInstaller {
       });
       await this.createLauncherProfiles();
 
+      // Verify installation
+      const verified = await this.isGameInstalled();
+      if (!verified) {
+        const missing = await this.getMissingFiles();
+        throw new Error(`Installation incomplète. Fichiers manquants: ${missing.join(', ')}`);
+      }
+
       onProgress({
         stage: 'Terminé',
         progress: 100,
@@ -181,6 +191,25 @@ class MinecraftInstaller {
     } finally {
       this.installing = false;
     }
+  }
+
+  async getMissingFiles() {
+    const missing = [];
+    const versionDir = path.join(this.gameDir, 'versions', this.forgeFullVersion);
+    const jarFile = path.join(versionDir, `${this.forgeFullVersion}.jar`);
+    const jsonFile = path.join(versionDir, `${this.forgeFullVersion}.json`);
+    const modsDir = path.join(this.gameDir, 'mods');
+
+    if (!fs.existsSync(jarFile)) missing.push('Forge JAR');
+    if (!fs.existsSync(jsonFile)) missing.push('Forge JSON');
+
+    for (const mod of MODS) {
+      if (!fs.existsSync(path.join(modsDir, mod.name))) {
+        missing.push(mod.name);
+      }
+    }
+
+    return missing;
   }
 
   async downloadVersionManifest() {
@@ -652,30 +681,55 @@ class MinecraftInstaller {
 
     const total = MODS.length;
     let downloaded = 0;
+    const failedMods = [];
 
     for (const mod of MODS) {
       const modPath = path.join(modsDir, mod.name);
 
-      if (!fs.existsSync(modPath)) {
-        onProgress({
-          stage: 'Mods',
-          progress: 85 + (downloaded / total) * 7,
-          detail: `Installation de ${mod.name}...`,
-        });
+      if (fs.existsSync(modPath)) {
+        const stat = fs.statSync(modPath);
+        if (mod.size && stat.size === mod.size) {
+          downloaded++;
+          continue;
+        }
+        fs.removeSync(modPath);
+      }
 
+      onProgress({
+        stage: 'Mods',
+        progress: 85 + (downloaded / total) * 7,
+        detail: `Installation de ${mod.name}...`,
+      });
+
+      let modDownloaded = false;
+      const urls = mod.urls || [mod.url, mod.fallbackUrl].filter(Boolean);
+
+      for (const url of urls) {
         try {
-          await this.downloadFile(mod.url, modPath);
-        } catch (_error) {
-          log.warn(`Primary URL failed for ${mod.name}, trying fallback...`);
-          try {
-            await this.downloadFile(mod.fallbackUrl, modPath);
-          } catch (fallbackError) {
-            log.error(`Failed to download mod ${mod.name}:`, fallbackError.message);
+          await this.downloadFile(url, modPath);
+          if (fs.existsSync(modPath) && fs.statSync(modPath).size > 1000) {
+            modDownloaded = true;
+            log.info(`Downloaded mod ${mod.name} from ${url}`);
+            break;
+          } else {
+            fs.removeSync(modPath);
           }
+        } catch (error) {
+          log.warn(`URL failed for ${mod.name}: ${url} - ${error.message}`);
+          if (fs.existsSync(modPath)) fs.removeSync(modPath);
         }
       }
 
+      if (!modDownloaded) {
+        failedMods.push(mod.name);
+        log.error(`All download URLs failed for mod ${mod.name}`);
+      }
+
       downloaded++;
+    }
+
+    if (failedMods.length > 0) {
+      throw new Error(`Impossible de télécharger les mods suivants: ${failedMods.join(', ')}`);
     }
 
     onProgress({
@@ -1026,6 +1080,11 @@ class MinecraftInstaller {
     const response = await axios.get(url, {
       responseType: 'arraybuffer',
       timeout: 30000,
+      maxRedirects: 5,
+      headers: {
+        'User-Agent': 'PalaCraft-Launcher/1.0.0',
+      },
+      validateStatus: (status) => status >= 200 && status < 300,
     });
 
     fs.writeFileSync(destPath, Buffer.from(response.data));
@@ -1037,6 +1096,11 @@ class MinecraftInstaller {
     const response = await axios.get(url, {
       responseType: 'stream',
       timeout: 60000,
+      maxRedirects: 5,
+      headers: {
+        'User-Agent': 'PalaCraft-Launcher/1.0.0',
+      },
+      validateStatus: (status) => status >= 200 && status < 300,
     });
 
     const totalLength = parseInt(response.headers['content-length'], 10) || 0;
