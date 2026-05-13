@@ -1,6 +1,6 @@
-# PalaCraft Launcher
+# Ezurium Launcher
 
-Launcher Minecraft premium style Paladium / NationGlory pour serveur PvP-Faction en 1.7.10.
+Launcher Minecraft premium style NationGlory pour serveur PvP-Faction Ezurium en 1.7.10.
 
 ![Electron](https://img.shields.io/badge/Electron-28-blue)
 ![Minecraft](https://img.shields.io/badge/Minecraft-1.7.10-green)
@@ -23,7 +23,7 @@ Launcher Minecraft premium style Paladium / NationGlory pour serveur PvP-Faction
 ## Structure du Projet
 
 ```
-palacraft-launcher/
+ezurium-launcher/
 ├── main.js                    # Process principal Electron
 ├── preload.js                 # Bridge IPC securise
 ├── package.json               # Config et dependances
@@ -56,8 +56,8 @@ palacraft-launcher/
 
 ```bash
 # Cloner le repo
-git clone https://github.com/amouxer/palacraft-launcher.git
-cd palacraft-launcher
+git clone https://github.com/amouxer/ezurium-launcher.git
+cd ezurium-launcher
 
 # Installer les dependances
 npm install
@@ -85,7 +85,7 @@ Modifiez les constantes dans `main.js` :
 
 ```javascript
 const LAUNCHER_CONFIG = {
-  serverIp: 'play.palacraft.fr',    // IP du serveur
+  serverIp: 'play.ezurium.fr',    // IP du serveur
   serverPort: 25565,                  // Port du serveur
   mcVersion: '1.7.10',               // Version Minecraft
   forgeVersion: '10.13.4.1614',      // Version Forge

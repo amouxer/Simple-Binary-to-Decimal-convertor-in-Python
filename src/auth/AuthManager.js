@@ -89,6 +89,8 @@ class AuthManager {
 
   getMicrosoftAuthCode() {
     return new Promise((resolve, reject) => {
+      let authCompleted = false;
+
       const authWindow = new BrowserWindow({
         width: 520,
         height: 700,
@@ -104,41 +106,42 @@ class AuthManager {
       const scopes = 'XboxLive.signin offline_access';
       const authUrl = `${MS_AUTH_URL}?client_id=${MS_CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(MS_REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}&prompt=select_account`;
 
+      const handleRedirect = (_event, url) => {
+        if (authCompleted) return;
+        try {
+          const urlObj = new URL(url);
+          const code = urlObj.searchParams.get('code');
+          const error = urlObj.searchParams.get('error');
+
+          if (error) {
+            authCompleted = true;
+            authWindow.destroy();
+            reject(new Error(`Erreur Microsoft: ${urlObj.searchParams.get('error_description') || error}`));
+            return;
+          }
+
+          if (code) {
+            authCompleted = true;
+            authWindow.destroy();
+            resolve(code);
+          }
+        } catch (_e) {
+          // URL parsing failed, ignore
+        }
+      };
+
       authWindow.loadURL(authUrl);
 
-      authWindow.webContents.on('will-redirect', (_event, url) => {
-        this.handleAuthRedirect(url, authWindow, resolve, reject);
-      });
-
-      authWindow.webContents.on('will-navigate', (_event, url) => {
-        this.handleAuthRedirect(url, authWindow, resolve, reject);
-      });
+      authWindow.webContents.on('will-redirect', handleRedirect);
+      authWindow.webContents.on('will-navigate', handleRedirect);
 
       authWindow.on('closed', () => {
-        reject(new Error('Fenêtre de connexion fermée par l\'utilisateur'));
+        if (!authCompleted) {
+          authCompleted = true;
+          reject(new Error('Fenêtre de connexion fermée par l\'utilisateur'));
+        }
       });
     });
-  }
-
-  handleAuthRedirect(url, authWindow, resolve, reject) {
-    try {
-      const urlObj = new URL(url);
-      const code = urlObj.searchParams.get('code');
-      const error = urlObj.searchParams.get('error');
-
-      if (error) {
-        authWindow.destroy();
-        reject(new Error(`Erreur Microsoft: ${urlObj.searchParams.get('error_description') || error}`));
-        return;
-      }
-
-      if (code) {
-        authWindow.destroy();
-        resolve(code);
-      }
-    } catch (_e) {
-      // URL parsing failed, ignore
-    }
   }
 
   async getMicrosoftTokens(authCode) {

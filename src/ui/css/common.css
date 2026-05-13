@@ -1,35 +1,35 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --primary: #6c5ce7;
-  --primary-light: #a29bfe;
-  --primary-dark: #5241c5;
-  --secondary: #00cec9;
-  --secondary-light: #55efc4;
-  --accent: #fd79a8;
-  --accent-light: #fab1d0;
+  --primary: #8b1a1a;
+  --primary-light: #d44a4a;
+  --primary-dark: #5c0e0e;
+  --secondary: #e85d04;
+  --secondary-light: #f48c06;
+  --accent: #ffba08;
+  --accent-light: #ffd60a;
   --danger: #e74c3c;
   --warning: #f39c12;
   --success: #00b894;
-  --info: #0984e3;
+  --info: #e85d04;
 
-  --bg-dark: #0a0a1a;
-  --bg-medium: #12122a;
-  --bg-light: #1a1a3e;
-  --bg-card: #1e1e42;
-  --bg-hover: #252555;
-  --bg-input: #15153a;
+  --bg-dark: #0a0505;
+  --bg-medium: #160a0a;
+  --bg-light: #251212;
+  --bg-card: #2a1414;
+  --bg-hover: #3a1a1a;
+  --bg-input: #1a0c0c;
 
   --text-primary: #ffffff;
-  --text-secondary: #b8b8d4;
-  --text-muted: #6c6c8a;
-  --text-accent: #a29bfe;
+  --text-secondary: #d4b8b8;
+  --text-muted: #8a6c6c;
+  --text-accent: #d44a4a;
 
-  --border-color: rgba(108, 92, 231, 0.2);
+  --border-color: rgba(139, 26, 26, 0.3);
   --border-light: rgba(255, 255, 255, 0.08);
-  --shadow-color: rgba(0, 0, 0, 0.4);
-  --glow-primary: rgba(108, 92, 231, 0.4);
-  --glow-secondary: rgba(0, 206, 201, 0.3);
+  --shadow-color: rgba(0, 0, 0, 0.5);
+  --glow-primary: rgba(139, 26, 26, 0.5);
+  --glow-secondary: rgba(232, 93, 4, 0.3);
 
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -84,7 +84,7 @@ html, body {
   left: 0;
   right: 0;
   height: 36px;
-  background: rgba(10, 10, 26, 0.95);
+  background: rgba(10, 5, 5, 0.95);
   -webkit-app-region: drag;
   display: flex;
   align-items: center;
@@ -209,7 +209,7 @@ html, body {
 
 .btn-secondary:hover {
   border-color: var(--primary);
-  background: rgba(108, 92, 231, 0.1);
+  background: rgba(139, 26, 26, 0.1);
   transform: translateY(-2px);
 }
 
@@ -469,7 +469,7 @@ html, body {
 
 @keyframes glowPulse {
   0%, 100% { box-shadow: 0 0 20px var(--glow-primary); }
-  50% { box-shadow: 0 0 40px var(--glow-primary), 0 0 60px rgba(108, 92, 231, 0.2); }
+  50% { box-shadow: 0 0 40px var(--glow-primary), 0 0 60px rgba(139, 26, 26, 0.3); }
 }
 
 /* ===== Particles Background ===== */
@@ -521,9 +521,9 @@ html, body {
 }
 
 .badge-primary {
-  background: rgba(108, 92, 231, 0.15);
+  background: rgba(139, 26, 26, 0.2);
   color: var(--primary-light);
-  border: 1px solid rgba(108, 92, 231, 0.3);
+  border: 1px solid rgba(139, 26, 26, 0.3);
 }
 
 .badge-success {

@@ -26,6 +26,7 @@ function setLoading(loading, text) {
   } else {
     loadingEl.classList.remove('active');
     tabs.style.display = 'flex';
+    panels.forEach(function(p) { p.style.display = ''; });
     switchTab(currentTab);
   }
 }

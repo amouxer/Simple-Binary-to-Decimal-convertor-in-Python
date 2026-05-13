@@ -829,8 +829,8 @@ class MinecraftInstaller {
     const profilesPath = path.join(this.gameDir, 'launcher_profiles.json');
     const profiles = {
       profiles: {
-        palacraft: {
-          name: 'PalaCraft',
+        ezurium: {
+          name: 'Ezurium',
           type: 'custom',
           created: new Date().toISOString(),
           lastUsed: new Date().toISOString(),
@@ -839,7 +839,7 @@ class MinecraftInstaller {
           javaArgs: `-Xmx${this.settings.ram}M -Xms${Math.min(this.settings.ram, 512)}M`,
         },
       },
-      selectedProfile: 'palacraft',
+      selectedProfile: 'ezurium',
     };
 
     fs.writeJsonSync(profilesPath, profiles, { spaces: 2 });
@@ -878,21 +878,33 @@ class MinecraftInstaller {
       detail: 'Démarrage de Minecraft...',
     });
 
-    log.info('Launching game with args count:', args.length);
+    log.info('Launching game with Java:', javaPath);
+    log.info('Game args count:', args.length);
+    log.info('Game directory:', this.gameDir);
+
+    const spawnOptions = {
+      cwd: this.gameDir,
+      stdio: 'pipe',
+    };
+
+    spawnOptions.detached = true;
+    if (process.platform === 'win32') {
+      spawnOptions.windowsHide = false;
+    }
 
     return new Promise((resolve, reject) => {
-      const gameProcess = spawn(javaPath, args, {
-        cwd: this.gameDir,
-        stdio: 'pipe',
-        detached: true,
-      });
+      const gameProcess = spawn(javaPath, args, spawnOptions);
+
+      let lastError = '';
 
       gameProcess.stdout.on('data', (data) => {
         log.info('[MC]', data.toString().trim());
       });
 
       gameProcess.stderr.on('data', (data) => {
-        log.warn('[MC-ERR]', data.toString().trim());
+        const msg = data.toString().trim();
+        lastError = msg;
+        log.warn('[MC-ERR]', msg);
       });
 
       gameProcess.on('error', (error) => {
@@ -902,6 +914,9 @@ class MinecraftInstaller {
 
       gameProcess.on('close', (code) => {
         log.info('Game process exited with code:', code);
+        if (code !== 0 && code !== null) {
+          log.error('Game crashed with code:', code, 'Last error:', lastError);
+        }
       });
 
       setTimeout(() => {
@@ -912,7 +927,7 @@ class MinecraftInstaller {
         });
         gameProcess.unref();
         resolve();
-      }, 3000);
+      }, 5000);
     });
   }
 
@@ -1014,7 +1029,10 @@ class MinecraftInstaller {
 
   buildGameArguments(session, classpath, nativesDir) {
     const separator = process.platform === 'win32' ? ';' : ':';
-    const assetsDir = path.join(this.gameDir, 'assets', 'virtual', 'legacy');
+    const assetsDir = path.join(this.gameDir, 'assets');
+    const legacyAssetsDir = path.join(assetsDir, 'virtual', 'legacy');
+
+    const useAssetsDir = fs.existsSync(legacyAssetsDir) ? legacyAssetsDir : assetsDir;
 
     const args = [
       `-Xmx${this.settings.ram}M`,
@@ -1024,13 +1042,14 @@ class MinecraftInstaller {
       '-XX:-UseAdaptiveSizePolicy',
       '-Xmn128M',
       `-Djava.library.path=${nativesDir}`,
+      `-Dminecraft.applet.TargetDirectory=${this.gameDir}`,
       '-cp',
       classpath.join(separator),
       'net.minecraft.launchwrapper.Launch',
       '--username', session.username,
       '--version', this.forgeFullVersion,
       '--gameDir', this.gameDir,
-      '--assetsDir', assetsDir,
+      '--assetsDir', useAssetsDir,
       '--assetIndex', '1.7.10',
       '--uuid', session.uuid.replace(/-/g, ''),
       '--accessToken', session.accessToken,
@@ -1038,6 +1057,10 @@ class MinecraftInstaller {
       '--userType', session.type === 'microsoft' ? 'mojang' : 'legacy',
       '--tweakClass', 'cpw.mods.fml.common.launcher.FMLTweaker',
     ];
+
+    log.info('Assets directory:', useAssetsDir);
+    log.info('Natives directory:', nativesDir);
+    log.info('Classpath entries:', classpath.length);
 
     if (this.settings.autoConnect && this.config.serverIp) {
       args.push('--server', this.config.serverIp);
@@ -1082,7 +1105,7 @@ class MinecraftInstaller {
       timeout: 30000,
       maxRedirects: 5,
       headers: {
-        'User-Agent': 'PalaCraft-Launcher/1.0.0',
+        'User-Agent': 'Ezurium-Launcher/1.0.0',
       },
       validateStatus: (status) => status >= 200 && status < 300,
     });
@@ -1098,7 +1121,7 @@ class MinecraftInstaller {
       timeout: 60000,
       maxRedirects: 5,
       headers: {
-        'User-Agent': 'PalaCraft-Launcher/1.0.0',
+        'User-Agent': 'Ezurium-Launcher/1.0.0',
       },
       validateStatus: (status) => status >= 200 && status < 300,
     });

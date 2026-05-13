@@ -20,11 +20,11 @@ const LAUNCHER_CONFIG = {
   height: 720,
   minWidth: 1024,
   minHeight: 600,
-  title: 'PalaCraft Launcher',
-  gameDir: path.join(app.getPath('appData'), '.palacraft'),
+  title: 'Ezurium Launcher',
+  gameDir: path.join(app.getPath('appData'), '.ezurium'),
   mcVersion: '1.7.10',
   forgeVersion: '10.13.4.1614',
-  serverIp: 'play.palacraft.fr',
+  serverIp: 'play.ezurium.fr',
   serverPort: 25565,
 };
 

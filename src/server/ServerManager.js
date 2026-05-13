@@ -119,8 +119,8 @@ class ServerManager {
     return [
       {
         id: 1,
-        title: 'Ouverture du serveur PalaCraft !',
-        content: 'Bienvenue sur PalaCraft ! Le serveur est maintenant ouvert a tous les joueurs. Rejoignez-nous pour une aventure incroyable avec des mods uniques, des events reguliers et une communaute active.',
+        title: 'Ouverture du serveur Ezurium !',
+        content: 'Bienvenue sur Ezurium ! Le serveur est maintenant ouvert a tous les joueurs. Rejoignez-nous pour une aventure incroyable avec des mods uniques, des events reguliers et une communaute active.',
         date: '2024-01-15',
         image: null,
         author: 'Admin',

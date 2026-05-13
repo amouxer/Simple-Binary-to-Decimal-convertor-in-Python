@@ -19,10 +19,10 @@
     particle.style.animationDelay = (Math.random() * 5) + 's';
 
     const colors = [
-      'rgba(108, 92, 231, 0.6)',
-      'rgba(0, 206, 201, 0.5)',
-      'rgba(253, 121, 168, 0.4)',
-      'rgba(162, 155, 254, 0.5)',
+      'rgba(139, 26, 26, 0.6)',
+      'rgba(232, 93, 4, 0.5)',
+      'rgba(255, 186, 8, 0.4)',
+      'rgba(212, 74, 74, 0.5)',
     ];
     particle.style.background = colors[Math.floor(Math.random() * colors.length)];
     particle.style.boxShadow = '0 0 6px ' + particle.style.background;

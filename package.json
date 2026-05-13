@@ -1,7 +1,7 @@
 {
-  "name": "palacraft-launcher",
+  "name": "ezurium-launcher",
   "version": "1.0.0",
-  "description": "Launcher Minecraft Premium - Style Paladium/NationGlory",
+  "description": "Ezurium Launcher - Launcher Minecraft Premium Style NationGlory",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -13,8 +13,8 @@
     "lint:fix": "eslint . --ext .js,.html --fix"
   },
   "build": {
-    "appId": "com.palacraftlauncher.app",
-    "productName": "PalaCraft Launcher",
+    "appId": "com.ezurium.launcher",
+    "productName": "Ezurium Launcher",
     "directories": {
       "output": "dist"
     },
@@ -45,7 +45,7 @@
       {
         "provider": "github",
         "owner": "amouxer",
-        "repo": "palacraftlauncher"
+        "repo": "ezurium-launcher"
       }
     ]
   },
@@ -56,7 +56,7 @@
     "nationglory",
     "forge"
   ],
-  "author": "PalaCraft Team",
+  "author": "Ezurium Team",
   "license": "MIT",
   "dependencies": {
     "adm-zip": "^0.5.10",
