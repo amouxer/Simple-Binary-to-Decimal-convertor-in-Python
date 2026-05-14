@@ -39,10 +39,7 @@ const MODS = [
     name: 'crosshairmod-v0.8.3-forge-mc1.7.10.jar',
     bundled: true,
   },
-  {
-    name: 'fastcraft-1.25.jar',
-    bundled: true,
-  },
+
 ];
 
 class MinecraftInstaller {
