@@ -29,10 +29,7 @@ const MODS = [
     name: '[1.7.10]ArmorStatusHUD-client-1.28.jar',
     bundled: true,
   },
-  {
-    name: 'crosshairmod-v0.8.3-forge-mc1.7.10.jar',
-    bundled: true,
-  },
+
 
 ];
 
