@@ -19,6 +19,30 @@ const MODS = [
     ],
     size: 158104,
   },
+  {
+    name: 'BetterFps-1.0.1.jar',
+    bundled: true,
+  },
+  {
+    name: 'NotEnoughItems-1.7.10-1.0.5.120-universal.jar',
+    bundled: true,
+  },
+  {
+    name: 'OptiFine_1.7.10_HD_U_E7.jar',
+    bundled: true,
+  },
+  {
+    name: '[1.7.10]ArmorStatusHUD-client-1.28.jar',
+    bundled: true,
+  },
+  {
+    name: 'crosshairmod-v0.8.3-forge-mc1.7.10.jar',
+    bundled: true,
+  },
+  {
+    name: 'fastcraft-1.25.jar',
+    bundled: true,
+  },
 ];
 
 class MinecraftInstaller {
@@ -736,16 +760,15 @@ class MinecraftInstaller {
     fs.ensureDirSync(modsDir);
 
     const total = MODS.length;
-    let downloaded = 0;
+    let installed = 0;
     const failedMods = [];
 
     for (const mod of MODS) {
       const modPath = path.join(modsDir, mod.name);
 
-      if (fs.existsSync(modPath)) {
-        const stat = fs.statSync(modPath);
-        if (mod.size && stat.size === mod.size) {
-          downloaded++;
+      if (fs.existsSync(modPath) && fs.statSync(modPath).size > 1000) {
+        if (!mod.size || fs.statSync(modPath).size === mod.size) {
+          installed++;
           continue;
         }
         fs.removeSync(modPath);
@@ -753,45 +776,61 @@ class MinecraftInstaller {
 
       onProgress({
         stage: 'Mods',
-        progress: 85 + (downloaded / total) * 7,
+        progress: 85 + (installed / total) * 7,
         detail: `Installation de ${mod.name}...`,
       });
 
-      let modDownloaded = false;
-      const urls = mod.urls || [mod.url, mod.fallbackUrl].filter(Boolean);
+      let modInstalled = false;
 
-      for (const url of urls) {
-        try {
-          await this.downloadFile(url, modPath);
-          if (fs.existsSync(modPath) && fs.statSync(modPath).size > 1000) {
-            modDownloaded = true;
-            log.info(`Downloaded mod ${mod.name} from ${url}`);
-            break;
-          } else {
-            fs.removeSync(modPath);
-          }
-        } catch (error) {
-          log.warn(`URL failed for ${mod.name}: ${url} - ${error.message}`);
-          if (fs.existsSync(modPath)) fs.removeSync(modPath);
+      // Bundled mods: copy from app resources
+      if (mod.bundled) {
+        const bundledPath = path.join(__dirname, '..', mod.name);
+        if (fs.existsSync(bundledPath)) {
+          fs.copySync(bundledPath, modPath);
+          modInstalled = true;
+          log.info(`Copied bundled mod ${mod.name}`);
+        } else {
+          log.warn(`Bundled mod not found at ${bundledPath}`);
         }
       }
 
-      if (!modDownloaded) {
-        failedMods.push(mod.name);
-        log.error(`All download URLs failed for mod ${mod.name}`);
+      // Download mods: try URLs
+      if (!modInstalled) {
+        const urls = mod.urls || [mod.url, mod.fallbackUrl].filter(Boolean);
+
+        for (const url of urls) {
+          try {
+            await this.downloadFile(url, modPath);
+            if (fs.existsSync(modPath) && fs.statSync(modPath).size > 1000) {
+              modInstalled = true;
+              log.info(`Downloaded mod ${mod.name} from ${url}`);
+              break;
+            } else {
+              fs.removeSync(modPath);
+            }
+          } catch (error) {
+            log.warn(`URL failed for ${mod.name}: ${url} - ${error.message}`);
+            if (fs.existsSync(modPath)) fs.removeSync(modPath);
+          }
+        }
       }
 
-      downloaded++;
+      if (!modInstalled) {
+        failedMods.push(mod.name);
+        log.error(`Failed to install mod ${mod.name}`);
+      }
+
+      installed++;
     }
 
     if (failedMods.length > 0) {
-      throw new Error(`Impossible de télécharger les mods suivants: ${failedMods.join(', ')}`);
+      throw new Error(`Impossible d'installer les mods suivants: ${failedMods.join(', ')}`);
     }
 
     onProgress({
       stage: 'Mods',
       progress: 92,
-      detail: `${downloaded} mods installés`,
+      detail: `${installed} mods installés`,
     });
   }
 
