@@ -182,15 +182,23 @@ class MinecraftInstaller {
       });
       await this.downloadMods(onProgress);
 
-      // 7. Find or download Java
+      // 7. Install resource packs
+      onProgress({
+        stage: 'Resource Packs',
+        progress: 92,
+        detail: 'Installation des resource packs...',
+      });
+      await this.installResourcePacks();
+
+      // 8. Find or download Java
       onProgress({
         stage: 'Java',
-        progress: 92,
+        progress: 94,
         detail: 'Vérification de Java...',
       });
       await this.ensureJava();
 
-      // 8. Finalize
+      // 9. Finalize
       onProgress({
         stage: 'Finalisation',
         progress: 98,
@@ -832,6 +840,31 @@ class MinecraftInstaller {
       progress: 92,
       detail: `${installed} mods installés`,
     });
+  }
+
+  async installResourcePacks() {
+    const resourcePacksDir = path.join(this.gameDir, 'resourcepacks');
+    fs.ensureDirSync(resourcePacksDir);
+
+    const bundledPacks = [
+      { name: 'faithful32.zip', bundledFile: 'faithful32.zip' },
+    ];
+
+    for (const pack of bundledPacks) {
+      const destPath = path.join(resourcePacksDir, pack.name);
+      if (fs.existsSync(destPath) && fs.statSync(destPath).size > 1000) {
+        log.info(`Resource pack ${pack.name} already installed`);
+        continue;
+      }
+
+      const srcPath = path.join(__dirname, '..', pack.bundledFile);
+      if (fs.existsSync(srcPath)) {
+        fs.copySync(srcPath, destPath);
+        log.info(`Installed resource pack ${pack.name}`);
+      } else {
+        log.warn(`Bundled resource pack not found: ${srcPath}`);
+      }
+    }
   }
 
   async ensureJava() {
