@@ -443,10 +443,11 @@ async function launchGame() {
       showNotification('Minecraft est lance ! Bon jeu !', 'success');
     } else {
       var errorMsg = result.error || 'Erreur inconnue';
-      console.error('Launch error:', errorMsg);
-      var shortMsg = errorMsg.split('\n')[0];
-      if (shortMsg.length > 100) shortMsg = shortMsg.substring(0, 100) + '...';
-      showNotification('Erreur: ' + shortMsg, 'error', 10000);
+      console.error('Launch error (full):', errorMsg);
+      var lines = errorMsg.split('\n').filter(function(l) { return l.trim(); });
+      var shortMsg = lines.slice(0, 3).join(' | ');
+      if (shortMsg.length > 200) shortMsg = shortMsg.substring(0, 200) + '...';
+      showNotification('Erreur: ' + shortMsg, 'error', 15000);
     }
   } catch (error) {
     console.error('Launch exception:', error);

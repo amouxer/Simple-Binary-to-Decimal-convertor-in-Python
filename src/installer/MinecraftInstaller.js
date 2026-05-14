@@ -271,12 +271,18 @@ class MinecraftInstaller {
     const forgeJarPath = path.join(forgeDir, `${this.forgeFullVersion}.jar`);
 
     if (fs.existsSync(forgeJsonPath) && fs.existsSync(forgeJarPath)) {
-      log.info('Forge already installed');
-      return;
+      const jarSize = fs.statSync(forgeJarPath).size;
+      if (jarSize > 500000) {
+        log.info('Forge already installed, JAR size:', jarSize);
+        return;
+      }
+      log.warn('Forge JAR seems too small (' + jarSize + ' bytes), re-downloading...');
+      fs.removeSync(forgeJarPath);
     }
 
-    const forgeInstallerUrl = `${FORGE_MAVEN_URL}/${this.mcVersion}-${this.forgeVersion}-${this.mcVersion}/forge-${this.mcVersion}-${this.forgeVersion}-${this.mcVersion}-installer.jar`;
-    const universalUrl = `${FORGE_MAVEN_URL}/${this.mcVersion}-${this.forgeVersion}-${this.mcVersion}/forge-${this.mcVersion}-${this.forgeVersion}-${this.mcVersion}-universal.jar`;
+    const forgeVersionStr = `${this.mcVersion}-${this.forgeVersion}-${this.mcVersion}`;
+    const forgeInstallerUrl = `${FORGE_MAVEN_URL}/${forgeVersionStr}/forge-${forgeVersionStr}-installer.jar`;
+    const universalUrl = `${FORGE_MAVEN_URL}/${forgeVersionStr}/forge-${forgeVersionStr}-universal.jar`;
 
     const installerPath = path.join(this.gameDir, 'temp', 'forge-installer.jar');
     fs.ensureDirSync(path.join(this.gameDir, 'temp'));
@@ -284,29 +290,22 @@ class MinecraftInstaller {
     onProgress({
       stage: 'Forge',
       progress: 32,
-      detail: 'Téléchargement de Forge installer...',
+      detail: 'T\u00e9l\u00e9chargement de Forge...',
+    });
+
+    // Step 1: Download the universal JAR directly (most reliable)
+    onProgress({
+      stage: 'Forge',
+      progress: 33,
+      detail: 'T\u00e9l\u00e9chargement de Forge universal...',
     });
 
     try {
       await this.downloadFileWithProgress(
-        forgeInstallerUrl,
-        installerPath,
-        (downloaded, total) => {
-          const pct = 32 + (downloaded / total) * 5;
-          onProgress({
-            stage: 'Forge',
-            progress: Math.round(pct),
-            detail: `Forge installer... ${this.formatBytes(downloaded)} / ${this.formatBytes(total)}`,
-          });
-        }
-      );
-    } catch (_error) {
-      log.warn('Forge installer download failed, trying universal...');
-      await this.downloadFileWithProgress(
         universalUrl,
-        installerPath,
+        forgeJarPath,
         (downloaded, total) => {
-          const pct = 32 + (downloaded / total) * 5;
+          const pct = 33 + (downloaded / total) * 3;
           onProgress({
             stage: 'Forge',
             progress: Math.round(pct),
@@ -314,6 +313,33 @@ class MinecraftInstaller {
           });
         }
       );
+      log.info('Forge universal JAR downloaded directly, size:', fs.statSync(forgeJarPath).size);
+    } catch (universalError) {
+      log.warn('Direct universal download failed:', universalError.message);
+    }
+
+    // Step 2: Download the installer for version JSON and libraries
+    onProgress({
+      stage: 'Forge',
+      progress: 36,
+      detail: 'T\u00e9l\u00e9chargement de Forge installer...',
+    });
+
+    try {
+      await this.downloadFileWithProgress(
+        forgeInstallerUrl,
+        installerPath,
+        (downloaded, total) => {
+          const pct = 36 + (downloaded / total) * 2;
+          onProgress({
+            stage: 'Forge',
+            progress: Math.round(pct),
+            detail: `Forge installer... ${this.formatBytes(downloaded)} / ${this.formatBytes(total)}`,
+          });
+        }
+      );
+    } catch (installerError) {
+      log.warn('Forge installer download failed:', installerError.message);
     }
 
     onProgress({
@@ -324,6 +350,18 @@ class MinecraftInstaller {
 
     await this.extractForge(installerPath, forgeDir, forgeJsonPath, forgeJarPath);
 
+    // Validate the Forge JAR
+    if (fs.existsSync(forgeJarPath)) {
+      const finalSize = fs.statSync(forgeJarPath).size;
+      log.info('Final Forge JAR size:', finalSize, 'bytes');
+      if (finalSize < 500000) {
+        log.error('Forge JAR is suspiciously small:', finalSize, 'bytes');
+        throw new Error('Le fichier Forge semble corrompu. Veuillez reparer le jeu.');
+      }
+    } else {
+      throw new Error('Le fichier Forge n\'a pas pu etre telecharge.');
+    }
+
     try {
       fs.removeSync(path.join(this.gameDir, 'temp'));
     } catch (_e) {
@@ -333,18 +371,26 @@ class MinecraftInstaller {
     onProgress({
       stage: 'Forge',
       progress: 42,
-      detail: 'Forge installé avec succès !',
+      detail: 'Forge install\u00e9 avec succ\u00e8s !',
     });
   }
 
   async extractForge(installerPath, forgeDir, forgeJsonPath, forgeJarPath) {
+    if (!fs.existsSync(installerPath)) {
+      log.warn('Forge installer not available for extraction, using generated config');
+      if (!fs.existsSync(forgeJsonPath)) {
+        const forgeVersionJson = this.createForgeVersionJson();
+        fs.writeJsonSync(forgeJsonPath, forgeVersionJson, { spaces: 2 });
+        log.info('Forge version JSON generated');
+      }
+      return;
+    }
+
     try {
       const zip = new AdmZip(installerPath);
       const zipEntries = zip.getEntries();
 
-      let versionJsonEntry = null;
-      let forgeUniversalEntry = null;
-
+      // Extract version JSON from installer (NOT the universal JAR - we download that directly)
       for (const entry of zipEntries) {
         if (entry.entryName === 'install_profile.json') {
           const installProfile = JSON.parse(entry.getData().toString('utf8'));
@@ -355,21 +401,10 @@ class MinecraftInstaller {
           }
         }
 
-        if (entry.entryName === 'version.json') {
-          versionJsonEntry = entry;
+        if (entry.entryName === 'version.json' && !fs.existsSync(forgeJsonPath)) {
+          fs.writeFileSync(forgeJsonPath, entry.getData());
+          log.info('Forge version JSON extracted from version.json');
         }
-
-        if (
-          entry.entryName.includes('forge-') &&
-          entry.entryName.endsWith('-universal.jar')
-        ) {
-          forgeUniversalEntry = entry;
-        }
-      }
-
-      if (!fs.existsSync(forgeJsonPath) && versionJsonEntry) {
-        fs.writeFileSync(forgeJsonPath, versionJsonEntry.getData());
-        log.info('Forge version JSON extracted from version.json');
       }
 
       if (!fs.existsSync(forgeJsonPath)) {
@@ -378,12 +413,25 @@ class MinecraftInstaller {
         log.info('Forge version JSON generated');
       }
 
-      if (forgeUniversalEntry) {
-        fs.writeFileSync(forgeJarPath, forgeUniversalEntry.getData());
-        log.info('Forge universal JAR extracted');
-      } else {
-        fs.copySync(installerPath, forgeJarPath);
-        log.info('Using installer as Forge JAR');
+      // If the universal JAR was NOT downloaded directly, extract from installer as fallback
+      if (!fs.existsSync(forgeJarPath) || fs.statSync(forgeJarPath).size < 500000) {
+        let forgeUniversalEntry = null;
+        for (const entry of zipEntries) {
+          if (
+            entry.entryName.includes('forge-') &&
+            entry.entryName.endsWith('-universal.jar')
+          ) {
+            forgeUniversalEntry = entry;
+          }
+        }
+
+        if (forgeUniversalEntry) {
+          log.info('Extracting Forge universal JAR from installer as fallback...');
+          fs.writeFileSync(forgeJarPath, forgeUniversalEntry.getData());
+          log.info('Forge universal JAR extracted from installer, size:', fs.statSync(forgeJarPath).size);
+        } else {
+          log.warn('No universal JAR found in installer');
+        }
       }
 
       await this.extractForgeLibraries(zip);
@@ -394,15 +442,13 @@ class MinecraftInstaller {
         const forgeVersionJson = this.createForgeVersionJson();
         fs.writeJsonSync(forgeJsonPath, forgeVersionJson, { spaces: 2 });
       }
-
-      if (!fs.existsSync(forgeJarPath)) {
-        fs.copySync(installerPath, forgeJarPath);
-      }
     }
   }
 
   async extractForgeLibraries(zip) {
     const zipEntries = zip.getEntries();
+    let extracted = 0;
+    let skipped = 0;
 
     for (const entry of zipEntries) {
       if (entry.entryName.startsWith('maven/') && !entry.isDirectory) {
@@ -411,10 +457,20 @@ class MinecraftInstaller {
           'libraries',
           entry.entryName.replace('maven/', '')
         );
+
+        // Don't overwrite existing files (they may have been downloaded directly and are more reliable)
+        if (fs.existsSync(libPath) && fs.statSync(libPath).size > 0) {
+          skipped++;
+          continue;
+        }
+
         fs.ensureDirSync(path.dirname(libPath));
         fs.writeFileSync(libPath, entry.getData());
+        extracted++;
+        log.info('Extracted from installer:', entry.entryName, '→', path.basename(libPath));
       }
     }
+    log.info('Forge libraries from installer: extracted', extracted, ', skipped', skipped, '(already exist)');
   }
 
   createForgeVersionJson() {
@@ -873,7 +929,19 @@ class MinecraftInstaller {
 
     onProgress({
       stage: 'Lancement',
-      progress: 10,
+      progress: 5,
+      detail: 'Vérification de Forge...',
+    });
+
+    // Pre-launch: validate and repair Forge JAR if needed
+    await this.validateAndRepairForgeJar(onProgress);
+
+    // Ensure Forge universal JAR is also in libraries/ for classpath
+    await this.ensureForgeInLibraries();
+
+    onProgress({
+      stage: 'Lancement',
+      progress: 15,
       detail: 'Préparation du lancement...',
     });
 
@@ -900,6 +968,7 @@ class MinecraftInstaller {
     const hasForgeJar = classpath.some(p => p.includes(this.forgeFullVersion));
     const hasVanillaJar = classpath.some(p => p.includes(this.mcVersion + '.jar'));
     log.info('Classpath validation - launchwrapper:', hasLaunchwrapper, 'forge:', hasForgeJar, 'vanilla:', hasVanillaJar);
+    log.info('Classpath entries (' + classpath.length + '):', classpath.map(p => path.basename(p)).join(', '));
 
     if (!hasLaunchwrapper) {
       throw new Error('Fichier launchwrapper manquant dans le classpath. Veuillez reparer le jeu.');
@@ -964,7 +1033,13 @@ class MinecraftInstaller {
           log.error('Full game output:', allOutput || '(no output captured)');
           if (!settled) {
             settled = true;
-            const errorDetail = allOutput.trim().slice(-1000) || 'Aucune sortie capturee';
+            const trimmed = allOutput.trim();
+            let errorDetail;
+            if (trimmed.length > 4000) {
+              errorDetail = trimmed.slice(0, 1500) + '\n\n... (tronqué) ...\n\n' + trimmed.slice(-1500);
+            } else {
+              errorDetail = trimmed || 'Aucune sortie capturee';
+            }
             reject(new Error(
               `Minecraft a crashe (code ${code}).\n` +
               `Java: ${javaPath}\n` +
@@ -1034,6 +1109,99 @@ class MinecraftInstaller {
       } catch (error) {
         log.warn('Failed to extract native from', jarPath, error.message);
       }
+    }
+  }
+
+  async validateAndRepairForgeJar(onProgress) {
+    const forgeJarPath = path.join(
+      this.gameDir, 'versions', this.forgeFullVersion, `${this.forgeFullVersion}.jar`
+    );
+
+    let needsRedownload = false;
+
+    if (!fs.existsSync(forgeJarPath)) {
+      log.warn('Forge JAR missing, need to re-download');
+      needsRedownload = true;
+    } else {
+      const jarSize = fs.statSync(forgeJarPath).size;
+      log.info('Forge JAR size:', jarSize);
+
+      if (jarSize < 500000) {
+        log.warn('Forge JAR too small (' + jarSize + ' bytes), likely corrupted');
+        needsRedownload = true;
+      } else {
+        // Verify the JAR is valid by trying to open it as a ZIP
+        try {
+          const testZip = new AdmZip(forgeJarPath);
+          const entries = testZip.getEntries();
+          const hasDeobfData = entries.some(e =>
+            e.entryName.includes('deobfuscation_data') || e.entryName.includes('deobf')
+          );
+          const hasFmlClasses = entries.some(e =>
+            e.entryName.includes('cpw/mods/fml/')
+          );
+          log.info('Forge JAR validation - entries:', entries.length, 'hasDeobfData:', hasDeobfData, 'hasFmlClasses:', hasFmlClasses);
+
+          if (!hasFmlClasses) {
+            log.warn('Forge JAR missing FML classes, likely corrupted or is installer JAR');
+            needsRedownload = true;
+          }
+        } catch (zipError) {
+          log.warn('Forge JAR is not a valid ZIP:', zipError.message);
+          needsRedownload = true;
+        }
+      }
+    }
+
+    if (needsRedownload) {
+      onProgress({
+        stage: 'Lancement',
+        progress: 8,
+        detail: 'Réparation de Forge...',
+      });
+
+      const forgeVersionStr = `${this.mcVersion}-${this.forgeVersion}-${this.mcVersion}`;
+      const universalUrl = `${FORGE_MAVEN_URL}/${forgeVersionStr}/forge-${forgeVersionStr}-universal.jar`;
+
+      log.info('Re-downloading Forge universal JAR from:', universalUrl);
+
+      try {
+        fs.ensureDirSync(path.dirname(forgeJarPath));
+        await this.downloadFileWithProgress(
+          universalUrl,
+          forgeJarPath,
+          (downloaded, total) => {
+            const pct = 8 + (downloaded / total) * 5;
+            onProgress({
+              stage: 'Lancement',
+              progress: Math.round(pct),
+              detail: `Réparation Forge... ${this.formatBytes(downloaded)} / ${this.formatBytes(total)}`,
+            });
+          }
+        );
+        log.info('Forge universal JAR re-downloaded, size:', fs.statSync(forgeJarPath).size);
+      } catch (downloadError) {
+        log.error('Failed to re-download Forge universal JAR:', downloadError.message);
+        throw new Error('Impossible de télécharger Forge. Vérifiez votre connexion internet.');
+      }
+    }
+  }
+
+  async ensureForgeInLibraries() {
+    const forgeJarPath = path.join(
+      this.gameDir, 'versions', this.forgeFullVersion, `${this.forgeFullVersion}.jar`
+    );
+    const forgeLibPath = path.join(
+      this.gameDir, 'libraries', 'net', 'minecraftforge', 'forge',
+      `${this.mcVersion}-${this.forgeVersion}-${this.mcVersion}`,
+      `forge-${this.mcVersion}-${this.forgeVersion}-${this.mcVersion}-universal.jar`
+    );
+
+    if (fs.existsSync(forgeJarPath) && (!fs.existsSync(forgeLibPath) || fs.statSync(forgeLibPath).size < 500000)) {
+      log.info('Copying Forge universal JAR to libraries directory');
+      fs.ensureDirSync(path.dirname(forgeLibPath));
+      fs.copySync(forgeJarPath, forgeLibPath);
+      log.info('Forge universal JAR copied to:', forgeLibPath);
     }
   }
 
