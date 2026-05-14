@@ -20,10 +20,7 @@ const MODS = [
     size: 158104,
   },
 
-  {
-    name: 'NotEnoughItems-1.7.10-1.0.5.120-universal.jar',
-    bundled: true,
-  },
+
   {
     name: 'OptiFine_1.7.10_HD_U_E7.jar',
     bundled: true,
