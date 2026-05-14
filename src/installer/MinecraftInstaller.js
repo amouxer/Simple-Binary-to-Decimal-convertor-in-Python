@@ -13,6 +13,7 @@ const LIBRARIES_URL = 'https://libraries.minecraft.net';
 const MODS = [
   {
     name: 'ironchest-1.7.10-6.0.62.742-universal.jar',
+    bundled: true,
     urls: [
       'https://mediafilez.forgecdn.net/files/2230/908/ironchest-1.7.10-6.0.62.742-universal.jar',
       'https://edge.forgecdn.net/files/2230/908/ironchest-1.7.10-6.0.62.742-universal.jar',
