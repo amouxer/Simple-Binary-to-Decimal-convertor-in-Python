@@ -22,10 +22,7 @@ const MODS = [
   },
 
 
-  {
-    name: 'OptiFine_1.7.10_HD_U_E7.jar',
-    bundled: true,
-  },
+
   {
     name: '[1.7.10]ArmorStatusHUD-client-1.28.jar',
     bundled: true,
