@@ -1228,27 +1228,82 @@ class MinecraftInstaller {
       classpath.push(vanillaJar);
     }
 
+    // Collect all library JARs
+    const allLibJars = [];
     const libDir = path.join(this.gameDir, 'libraries');
-    const addJars = (dir) => {
+    const collectJars = (dir) => {
       if (!fs.existsSync(dir)) return;
       const items = fs.readdirSync(dir, { withFileTypes: true });
 
       for (const item of items) {
         const fullPath = path.join(dir, item.name);
         if (item.isDirectory()) {
-          addJars(fullPath);
+          collectJars(fullPath);
         } else if (
           item.name.endsWith('.jar') &&
           !item.name.includes('-natives-') &&
           !item.name.includes('-sources') &&
           !item.name.includes('-javadoc')
         ) {
-          classpath.push(fullPath);
+          allLibJars.push(fullPath);
         }
       }
     };
 
-    addJars(libDir);
+    collectJars(libDir);
+
+    // Deduplicate: when multiple versions of the same library exist, keep only the highest version
+    // e.g. guava-15.0.jar vs guava-17.0.jar → keep guava-17.0.jar
+    const libsByArtifact = new Map();
+
+    for (const jarPath of allLibJars) {
+      const fileName = path.basename(jarPath, '.jar');
+      // Extract artifact name by removing version suffix
+      // e.g. "guava-15.0" → artifact "guava", version "15.0"
+      // e.g. "commons-lang3-3.3.2" → artifact "commons-lang3", version "3.3.2"
+      const versionMatch = fileName.match(/^(.+?)-(\d+[\d.]*(?:[-.](?:Final|beta\d+|SNAPSHOT|universal|hotspot))?(?:\.\d+)*)$/i);
+
+      let artifactName, versionStr;
+      if (versionMatch) {
+        artifactName = versionMatch[1].toLowerCase();
+        versionStr = versionMatch[2];
+      } else {
+        artifactName = fileName.toLowerCase();
+        versionStr = '0';
+      }
+
+      if (!libsByArtifact.has(artifactName)) {
+        libsByArtifact.set(artifactName, []);
+      }
+      libsByArtifact.get(artifactName).push({ path: jarPath, version: versionStr, fileName });
+    }
+
+    let duplicatesRemoved = 0;
+    for (const [artifact, versions] of libsByArtifact) {
+      if (versions.length > 1) {
+        // Sort versions: highest first (simple numeric comparison on version parts)
+        versions.sort((a, b) => {
+          const aParts = a.version.split(/[.-]/).map(p => parseInt(p, 10) || 0);
+          const bParts = b.version.split(/[.-]/).map(p => parseInt(p, 10) || 0);
+          for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+            const diff = (bParts[i] || 0) - (aParts[i] || 0);
+            if (diff !== 0) return diff;
+          }
+          return 0;
+        });
+
+        log.info(`Duplicate library "${artifact}": keeping ${versions[0].fileName}, removing: ${versions.slice(1).map(v => v.fileName).join(', ')}`);
+        classpath.push(versions[0].path);
+        duplicatesRemoved += versions.length - 1;
+      } else {
+        classpath.push(versions[0].path);
+      }
+    }
+
+    if (duplicatesRemoved > 0) {
+      log.info(`Classpath deduplication: removed ${duplicatesRemoved} duplicate libraries`);
+    }
+
     return classpath;
   }
 
